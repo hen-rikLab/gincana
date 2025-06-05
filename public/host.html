@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quiz - Host</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    #content {
+      display: none; /* escondido até senha ser correta */
+    }
+    #accessDenied {
+      color: red;
+      font-size: 1.5em;
+      margin-top: 50px;
+    }
+    #questionList {
+      width: 80%;
+      padding: 10px;
+      font-size: 1.2em;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      margin: 10px;
+      cursor: pointer;
+    }
+    .scoreboard {
+      margin-top: 30px;
+    }
+    .team {
+      margin: 15px 0;
+    }
+    .score {
+      font-size: 1.5em;
+      margin: 10px;
+    }
+    .score-button {
+      padding: 10px 20px;
+      font-size: 1.2em;
+      margin: 5px;
+      cursor: pointer;
+    }
+    #timer {
+      font-size: 2em;
+      margin-top: 20px;
+    }
+    #timerControls {
+      margin-top: 15px;
+    }
+    #timerInput {
+      font-size: 1.2em;
+      width: 60px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Quiz - Host</h1>
+
+  <div id="accessDenied"></div>
+
+  <div id="content">
+    <select id="questionList"></select>
+    <button onclick="sendQuestion()">Enviar Pergunta</button>
+    <div id="timerControls">
+      <input type="number" id="timerInput" min="1" value="5" /> segundos
+      <button onclick="startTimer()">Iniciar Timer</button>
+      <!-- <button onclick="stopTimer()">Parar Timer</button>  ⁡⁢⁣⁡⁢⁣⁢sapoha não ta pegando⁡-->
+    </div>
+    <button onclick="resetTelao()">Resetar Telão</button>
+    <div id="timer">Tempo: 0s</div>
+
+    <div class="scoreboard">
+      <h2>Pontuações</h2>
+      <div id="scores"></div>
+    </div>
+  </div>
+
+  <script>
+    const correctPassword = "quiz123";
+    const accessDeniedDiv = document.getElementById("accessDenied");
+    const contentDiv = document.getElementById("content");
+
+    function requestPassword() {
+      const input = prompt("Digite a senha para acessar a tela do host:");
+      if(input === correctPassword) {
+        contentDiv.style.display = "block";
+        initializeHost();
+      } else {
+        accessDeniedDiv.textContent = "Senha incorreta. Acesso negado.";
+      }
+    }
+
+    requestPassword();
+
+    function initializeHost() {
+      const socket = io();
+      let scores = {};
+      let timerInterval;
+
+      const teams = ["1A", "1B", "1C", "2A", "2B", "2C", "3A", "3B", "3C"];
+      const colors = {
+        "1A": "red", "1B": "blue", "1C": "purple",
+        "2A": "green", "2B": "orange", "2C": "pink",
+        "3A": "yellow", "3B": "brown", "3C": "cyan"
+      };
+
+      teams.forEach(team => scores[team] = 0);
+
+      const scoresDiv = document.getElementById("scores");
+      teams.forEach(team => {
+        scoresDiv.innerHTML += `
+          <div class="team">
+            <span class="score">Equipe ${team}: <span id="score-${team}">0</span></span>
+            <button class="score-button" onclick="updateScore('${team}', 1)">+1</button>
+            <button class="score-button" onclick="updateScore('${team}', -1)">-1</button>
+          </div>
+        `;
+      });
+
+      window.updateScore = function(team, delta) {
+        scores[team] += delta;
+        if(scores[team] < 0) scores[team] = 0; // Não deixar negativo
+        document.getElementById(`score-${team}`).innerText = scores[team];
+        if (delta > 0) {
+          socket.emit("point", { team, color: colors[team] });
+        }
+      };
+
+      window.sendQuestion = function() {
+        const question = document.getElementById("questionList").value;
+        socket.emit("question", question);
+      };
+
+      window.startTimer = function() {
+        let durationInput = document.getElementById("timerInput").value;
+        let duration = parseInt(durationInput);
+        if (isNaN(duration) || duration <= 0) {
+          alert("Digite um número válido de segundos para o timer.");
+          return;
+        }
+
+        document.getElementById("timer").innerText = `Tempo: ${duration}s`;
+        socket.emit("timer", duration);
+
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          duration--;
+          document.getElementById("timer").innerText = `Tempo: ${duration}s`;
+          if (duration <= 0) {
+            clearInterval(timerInterval);
+          }
+        }, 1000);
+      };
+
+      window.stopTimer = function() {
+        clearInterval(timerInterval);
+        document.getElementById("timer").innerText = "Timer parado";
+        // Opcional: enviar evento para o telão limpar o timer, ou não
+        socket.emit("resetTelao"); // pode usar reset para limpar o timer do telão também
+      };
+
+      window.resetTelao = function() {
+        socket.emit("resetTelao");
+      };
+
+      const questions = [
+        "Qual é a capital do Brasil?",
+        "Quantos continentes existem?",
+        "Quem escreveu 'Dom Casmurro'?",
+        "Qual é a fórmula da água?",
+        "Quem pintou a Mona Lisa?",
+        "Qual é o maior planeta do sistema solar?",
+        "Em que ano o homem pisou na Lua?"
+      ];
+
+      window.onload = () => {
+        const select = document.getElementById("questionList");
+        questions.forEach((q, i) => {
+          const opt = document.createElement("option");
+          opt.value = q;
+          opt.textContent = `${i + 1}. ${q}`;
+          select.appendChild(opt);
+        });
+      };
+    }
+  </script>
+</body>
+</html>

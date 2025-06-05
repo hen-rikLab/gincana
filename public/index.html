@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz - Jogador</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            text-align: center;
+            font-family: 'Raleway', sans-serif;
+            background: linear-gradient(to right, #ff416c, #ff4b2b, #4169e1, #8a2be2);
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        select, button {
+            font-size: 20px;
+            padding: 10px;
+            margin: 10px;
+            border-radius: 10px;
+            border: none;
+            text-align: center;
+        }
+        #buzzButton {
+            font-size: 24px;
+            padding: 25px;
+            width: 80%;
+            max-width: 300px;
+            cursor: pointer;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: transform 0.1s, background 0.2s;
+        }
+        #buzzButton:active {
+            transform: scale(0.95);
+        }
+        #result {
+            font-size: 22px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Quiz - Escolha sua Equipe</h1>
+    <select id="team">
+        <option value="1A">Equipe 1A</option>
+        <option value="1B">Equipe 1B</option>
+        <option value="1C">Equipe 1C</option>
+    </select>
+    <button id="buzzButton">🎵 Responder!</button>
+    <h2 id="result"></h2>
+
+    <script>
+        const socket = io();
+        const button = document.getElementById('buzzButton');
+        const result = document.getElementById('result');
+
+        button.addEventListener('click', () => {
+            const team = document.getElementById('team').value;
+            socket.emit('buzz', { team });
+        });
+
+        socket.on('first', (firstResponder) => {
+            result.textContent = `⚡ Equipe ${firstResponder.team} respondeu primeiro!`;
+        });
+
+        socket.on('reset', () => {
+            result.textContent = "";
+        });
+    </script>
+</body>
+</html>
