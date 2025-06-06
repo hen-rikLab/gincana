@@ -16,12 +16,39 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      transition: background 0.5s;
+      transition: background 0.5s, color 0.5s;
+      padding: 20px;
     }
-    #question { font-size: 2.5em; margin-bottom: 20px; }
-    #notification { font-size: 2em; font-weight: bold; margin-bottom: 20px; }
-    #answer { font-size: 1.8em; color: lightgreen; margin-top: 10px; }
-    #timer { font-size: 1.5em; }
+    #question {
+      font-size: 3em;
+      font-weight: bold;
+      margin-bottom: 30px;
+    }
+    #notification {
+      font-size: 2.5em;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    #answer {
+      font-size: 2em;
+      color: lightgreen;
+      margin-top: 15px;
+    }
+    #timer {
+      font-size: 2em;
+      margin-top: 20px;
+    }
+
+    /* ADICIONADO: animação pulse */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+
+    .pulse {
+      animation: pulse 1s ease-in-out;
+    }
   </style>
 </head>
 <body>
@@ -35,33 +62,61 @@
     const socket = io();
     const alarm = document.getElementById("alarm");
 
+    const questionDiv = document.getElementById("question");
+    const notificationDiv = document.getElementById("notification");
+    const answerDiv = document.getElementById("answer");
+    const timerDiv = document.getElementById("timer");
+
+    // Função para calcular cor de contraste (preto ou branco) com base no fundo
+    function getContrastingTextColor(bgColor) {
+      // Converte cor nome para hex (se necessário)
+      const temp = document.createElement("div");
+      temp.style.color = bgColor;
+      document.body.appendChild(temp);
+      const cs = window.getComputedStyle(temp).color;
+      document.body.removeChild(temp);
+
+      const rgb = cs.match(/\d+/g).map(Number);
+      const brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
+      return brightness > 125 ? "black" : "white";
+    }
+
     socket.on("question", (question) => {
-      document.getElementById("question").textContent = question;
-      document.getElementById("notification").textContent = "";
-      document.getElementById("answer").textContent = "";
+      questionDiv.textContent = question;
+      notificationDiv.textContent = "";
+      answerDiv.textContent = "";
     });
 
     socket.on("perguntaAtual", (question) => {
-      document.getElementById("question").textContent = question;
+      questionDiv.textContent = question;
     });
 
     socket.on("respostaAtual", (resposta) => {
-      document.getElementById("answer").textContent = `Resposta: ${resposta}`;
+      answerDiv.textContent = `Resposta: ${resposta}`;
     });
 
     socket.on("point", ({ team, color }) => {
-      document.getElementById("notification").textContent = `Equipe ${team} ganhou +1 ponto!`;
+      notificationDiv.textContent = `Equipe ${team} ganhou +1 ponto!`;
       document.body.style.background = color;
+
+      // Ajustar cor do texto automaticamente para manter contraste
+      const textColor = getContrastingTextColor(color);
+      document.body.style.color = textColor;
+      answerDiv.style.color = textColor === "white" ? "lightgreen" : "green";
+
+      // 🔥 Aplica a animação pulse
+      notificationDiv.classList.remove("pulse"); // reseta animação se já estiver aplicada
+      void notificationDiv.offsetWidth; // força reflow para reiniciar animação
+      notificationDiv.classList.add("pulse");
     });
 
     socket.on("timer", (duration) => {
-      const timer = document.getElementById("timer");
-      timer.textContent = `Tempo: ${duration}s`;
+      timerDiv.textContent = `Tempo: ${duration}s`;
 
       let current = duration;
       const interval = setInterval(() => {
         current--;
-        timer.textContent = `Tempo: ${current}s`;
+        timerDiv.textContent = `Tempo: ${current}s`;
         if (current <= 0) {
           clearInterval(interval);
           alarm.play();
@@ -70,11 +125,13 @@
     });
 
     socket.on("resetTelao", () => {
-      document.getElementById("question").textContent = "Aguardando pergunta...";
-      document.getElementById("notification").textContent = "";
-      document.getElementById("answer").textContent = "";
-      document.getElementById("timer").textContent = "";
+      questionDiv.textContent = "Aguardando pergunta...";
+      notificationDiv.textContent = "";
+      answerDiv.textContent = "";
+      timerDiv.textContent = "";
       document.body.style.background = "#888888";
+      document.body.style.color = "white";
+      answerDiv.style.color = "lightgreen";
     });
   </script>
 </body>
