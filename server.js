@@ -8,7 +8,7 @@ const io = new Server(server);
 
 app.use(express.static(__dirname + '/public'));
 
-// Lista de perguntas e respostas extraídas do PDF
+// Lista de perguntas e respostas
 const perguntasERespostas = [
   { pergunta: "Qual é a capital do Canadá?", resposta: "Ottawa" },
   { pergunta: "Quem escreveu \"Dom Quixote\"?", resposta: "Miguel de Cervantes" },
@@ -69,10 +69,13 @@ let respostaAtual = null;
 io.on("connection", (socket) => {
   console.log("Novo cliente conectado");
 
+  socket.emit("contadorPerguntas", perguntasERespostas.length - perguntasUsadas.length);
+
   socket.on("sortearPergunta", () => {
     if (perguntasUsadas.length >= perguntasERespostas.length) {
       perguntasUsadas = [];
     }
+
     let idx;
     do {
       idx = Math.floor(Math.random() * perguntasERespostas.length);
@@ -83,6 +86,7 @@ io.on("connection", (socket) => {
     respostaAtual = perguntasERespostas[idx].resposta;
 
     io.emit("perguntaAtual", perguntaAtual);
+    io.emit("contadorPerguntas", perguntasERespostas.length - perguntasUsadas.length);
   });
 
   socket.on("mostrarResposta", () => {
@@ -103,6 +107,12 @@ io.on("connection", (socket) => {
     perguntaAtual = null;
     respostaAtual = null;
     io.emit("resetTelao");
+    io.emit("contadorPerguntas", perguntasERespostas.length - perguntasUsadas.length);
+  });
+
+  socket.on("resetarPerguntas", () => {
+    perguntasUsadas = [];
+    io.emit("contadorPerguntas", perguntasERespostas.length);
   });
 });
 

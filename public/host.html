@@ -15,6 +15,7 @@
     #timer { font-size: 2em; margin-top: 20px; }
     #timerControls { margin-top: 15px; }
     #timerInput { font-size: 1.2em; width: 60px; text-align: center; }
+    #contadorPerguntas { font-size: 1.2em; margin: 15px 0; color: #444; }
   </style>
 </head>
 <body>
@@ -23,6 +24,7 @@
   <div id="content" style="display: none;">
     <button onclick="sortearPergunta()">Sortear Pergunta</button>
     <button onclick="mostrarResposta()">Mostrar Resposta</button>
+    <div id="contadorPerguntas">Perguntas restantes: ...</div>
     <div id="perguntaAtual"></div>
     <div id="respostaAtual"></div>
 
@@ -32,6 +34,7 @@
     </div>
 
     <button onclick="resetTelao()">Resetar Telão</button>
+    <button onclick="resetarPerguntas()">Reiniciar Perguntas</button>
     <div id="timer">Tempo: 0s</div>
 
     <div class="scoreboard">
@@ -111,6 +114,16 @@
         document.getElementById("perguntaAtual").textContent = "";
         document.getElementById("respostaAtual").textContent = "";
       };
+
+      window.resetarPerguntas = () => {
+        if (confirm("Tem certeza que deseja reiniciar a lista de perguntas?")) {
+          socket.emit("resetarPerguntas");
+        }
+      };
+
+      socket.on("contadorPerguntas", (restantes) => {
+        document.getElementById("contadorPerguntas").textContent = `Perguntas restantes: ${restantes}`;
+      });
 
       socket.on("perguntaAtual", (pergunta) => {
         document.getElementById("perguntaAtual").textContent = `Pergunta: ${pergunta}`;
