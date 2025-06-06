@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -10,7 +10,7 @@
       text-align: center;
       font-family: 'Raleway', sans-serif;
       color: white;
-      background: #888888; /* fundo cinza padrão */
+      background: #888888;
       height: 100vh;
       display: flex;
       flex-direction: column;
@@ -18,23 +18,16 @@
       align-items: center;
       transition: background 0.5s;
     }
-    #question {
-      font-size: 2.5em;
-      margin-bottom: 20px;
-    }
-    #notification {
-      font-size: 2em;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
-    #timer {
-      font-size: 1.5em;
-    }
+    #question { font-size: 2.5em; margin-bottom: 20px; }
+    #notification { font-size: 2em; font-weight: bold; margin-bottom: 20px; }
+    #answer { font-size: 1.8em; color: lightgreen; margin-top: 10px; }
+    #timer { font-size: 1.5em; }
   </style>
 </head>
 <body>
-  <div id="question">Aguardando resposta...</div>
+  <div id="question">Aguardando pergunta...</div>
   <div id="notification"></div>
+  <div id="answer"></div>
   <div id="timer"></div>
   <audio id="alarm" src="alert.mp3"></audio>
 
@@ -44,6 +37,16 @@
 
     socket.on("question", (question) => {
       document.getElementById("question").textContent = question;
+      document.getElementById("notification").textContent = "";
+      document.getElementById("answer").textContent = "";
+    });
+
+    socket.on("perguntaAtual", (question) => {
+      document.getElementById("question").textContent = question;
+    });
+
+    socket.on("respostaAtual", (resposta) => {
+      document.getElementById("answer").textContent = `Resposta: ${resposta}`;
     });
 
     socket.on("point", ({ team, color }) => {
@@ -67,10 +70,11 @@
     });
 
     socket.on("resetTelao", () => {
-      document.getElementById("question").textContent = "Aguardando resposta...";
+      document.getElementById("question").textContent = "Aguardando pergunta...";
       document.getElementById("notification").textContent = "";
+      document.getElementById("answer").textContent = "";
       document.getElementById("timer").textContent = "";
-      document.body.style.background = "#888888";  // fundo cinza padrão
+      document.body.style.background = "#888888";
     });
   </script>
 </body>

@@ -6,75 +6,31 @@
   <title>Quiz - Host</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-    }
-    h1 {
-      margin-top: 20px;
-    }
-    #content {
-      display: none; /* escondido até senha ser correta */
-    }
-    #accessDenied {
-      color: red;
-      font-size: 1.5em;
-      margin-top: 50px;
-    }
-    #questionList {
-      width: 80%;
-      padding: 10px;
-      font-size: 1.2em;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 1em;
-      margin: 10px;
-      cursor: pointer;
-    }
-    .scoreboard {
-      margin-top: 30px;
-    }
-    .team {
-      margin: 15px 0;
-    }
-    .score {
-      font-size: 1.5em;
-      margin: 10px;
-    }
-    .score-button {
-      padding: 10px 20px;
-      font-size: 1.2em;
-      margin: 5px;
-      cursor: pointer;
-    }
-    #timer {
-      font-size: 2em;
-      margin-top: 20px;
-    }
-    #timerControls {
-      margin-top: 15px;
-    }
-    #timerInput {
-      font-size: 1.2em;
-      width: 60px;
-      text-align: center;
-    }
+    body { font-family: Arial, sans-serif; text-align: center; }
+    button { padding: 10px 20px; margin: 10px; font-size: 1em; cursor: pointer; }
+    .scoreboard { margin-top: 30px; }
+    .team { margin: 15px 0; }
+    .score { font-size: 1.5em; }
+    .score-button { padding: 10px 20px; margin: 5px; font-size: 1.2em; cursor: pointer; }
+    #timer { font-size: 2em; margin-top: 20px; }
+    #timerControls { margin-top: 15px; }
+    #timerInput { font-size: 1.2em; width: 60px; text-align: center; }
   </style>
 </head>
 <body>
   <h1>Quiz - Host</h1>
-
   <div id="accessDenied"></div>
+  <div id="content" style="display: none;">
+    <button onclick="sortearPergunta()">Sortear Pergunta</button>
+    <button onclick="mostrarResposta()">Mostrar Resposta</button>
+    <div id="perguntaAtual"></div>
+    <div id="respostaAtual"></div>
 
-  <div id="content">
-    <select id="questionList"></select>
-    <button onclick="sendQuestion()">Enviar Pergunta</button>
     <div id="timerControls">
       <input type="number" id="timerInput" min="1" value="5" /> segundos
       <button onclick="startTimer()">Iniciar Timer</button>
-      <!-- <button onclick="stopTimer()">Parar Timer</button>  ⁡⁢⁣⁡⁢⁣⁢sapoha não ta pegando⁡-->
     </div>
+
     <button onclick="resetTelao()">Resetar Telão</button>
     <div id="timer">Tempo: 0s</div>
 
@@ -91,7 +47,7 @@
 
     function requestPassword() {
       const input = prompt("Digite a senha para acessar a tela do host:");
-      if(input === correctPassword) {
+      if (input === correctPassword) {
         contentDiv.style.display = "block";
         initializeHost();
       } else {
@@ -103,7 +59,7 @@
 
     function initializeHost() {
       const socket = io();
-      let scores = {};
+      window.scores = {};
       let timerInterval;
 
       const teams = ["1A", "1B", "1C", "2A", "2B", "2C", "3A", "3B", "3C"];
@@ -113,10 +69,9 @@
         "3A": "red", "3B": "blue", "3C": "green"
       };
 
-      teams.forEach(team => scores[team] = 0);
-
       const scoresDiv = document.getElementById("scores");
       teams.forEach(team => {
+        scores[team] = 0;
         scoresDiv.innerHTML += `
           <div class="team">
             <span class="score">Equipe ${team}: <span id="score-${team}">0</span></span>
@@ -128,69 +83,43 @@
 
       window.updateScore = function(team, delta) {
         scores[team] += delta;
-        if(scores[team] < 0) scores[team] = 0; // Não deixar negativo
+        if (scores[team] < 0) scores[team] = 0;
         document.getElementById(`score-${team}`).innerText = scores[team];
         if (delta > 0) {
           socket.emit("point", { team, color: colors[team] });
         }
       };
 
-      window.sendQuestion = function() {
-        const question = document.getElementById("questionList").value;
-        socket.emit("question", question);
-      };
+      window.sortearPergunta = () => socket.emit("sortearPergunta");
+      window.mostrarResposta = () => socket.emit("mostrarResposta");
 
-      window.startTimer = function() {
-        let durationInput = document.getElementById("timerInput").value;
-        let duration = parseInt(durationInput);
-        if (isNaN(duration) || duration <= 0) {
-          alert("Digite um número válido de segundos para o timer.");
-          return;
-        }
-
-        document.getElementById("timer").innerText = `Tempo: ${duration}s`;
+      window.startTimer = function () {
+        let duration = parseInt(document.getElementById("timerInput").value);
+        if (isNaN(duration) || duration <= 0) return alert("Digite um número válido.");
+        document.getElementById("timer").textContent = `Tempo: ${duration}s`;
         socket.emit("timer", duration);
-
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
           duration--;
-          document.getElementById("timer").innerText = `Tempo: ${duration}s`;
-          if (duration <= 0) {
-            clearInterval(timerInterval);
-          }
+          document.getElementById("timer").textContent = `Tempo: ${duration}s`;
+          if (duration <= 0) clearInterval(timerInterval);
         }, 1000);
       };
 
-      window.stopTimer = function() {
-        clearInterval(timerInterval);
-        document.getElementById("timer").innerText = "Timer parado";
-        // Opcional: enviar evento para o telão limpar o timer, ou não
-        socket.emit("resetTelao"); // pode usar reset para limpar o timer do telão também
-      };
-
-      window.resetTelao = function() {
+      window.resetTelao = () => {
         socket.emit("resetTelao");
+        document.getElementById("perguntaAtual").textContent = "";
+        document.getElementById("respostaAtual").textContent = "";
       };
 
-      const questions = [
-        "Qual é a capital do Brasil?",
-        "Quantos continentes existem?",
-        "Quem escreveu 'Dom Casmurro'?",
-        "Qual é a fórmula da água?",
-        "Quem pintou a Mona Lisa?",
-        "Qual é o maior planeta do sistema solar?",
-        "Em que ano o homem pisou na Lua?"
-      ];
+      socket.on("perguntaAtual", (pergunta) => {
+        document.getElementById("perguntaAtual").textContent = `Pergunta: ${pergunta}`;
+        document.getElementById("respostaAtual").textContent = "";
+      });
 
-      window.onload = () => {
-        const select = document.getElementById("questionList");
-        questions.forEach((q, i) => {
-          const opt = document.createElement("option");
-          opt.value = q;
-          opt.textContent = `${i + 1}. ${q}`;
-          select.appendChild(opt);
-        });
-      };
+      socket.on("respostaAtual", (resposta) => {
+        document.getElementById("respostaAtual").textContent = `Resposta: ${resposta}`;
+      });
     }
   </script>
 </body>
